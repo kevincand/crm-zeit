@@ -1,0 +1,355 @@
+<div class="p-8">
+  <header class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <h2 class="text-3xl font-extrabold text-white tracking-tight">Campanhas de E-mail</h2>
+      <p class="text-slate-400 text-sm mt-1">Crie newsletters, pré-visualize o layout e gerencie disparos</p>
+    </div>
+
+    <button (click)="openCreateModal()"
+      class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-sm shadow-lg shadow-indigo-600/25 border border-indigo-400/30 transition-all flex items-center gap-2">
+      <span class="material-symbols-outlined text-base">mark_email_unread</span> Nova Campanha
+    </button>
+  </header>
+
+  <!-- Tabela de Campanhas -->
+  <div class="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl overflow-hidden">
+    <div *ngIf="isLoading" class="flex justify-center py-16">
+      <div class="animate-spin h-9 w-9 border-4 border-indigo-500 border-t-transparent rounded-full"></div>
+    </div>
+
+    <table *ngIf="!isLoading" class="w-full text-left text-sm text-slate-300">
+      <thead
+        class="bg-slate-950/60 uppercase text-[11px] font-bold tracking-wider text-slate-400 border-b border-slate-800">
+        <tr>
+          <th class="px-6 py-4">Nome da Campanha / Assunto</th>
+          <th class="px-6 py-4">Remetente</th>
+          <th class="px-6 py-4">Status</th>
+          <th class="px-6 py-4">Destinatários</th>
+          <th class="px-6 py-4">Data de Criação</th>
+          <th class="px-6 py-4 text-right">Ações</th>
+        </tr>
+      </thead>
+
+      <tbody class="divide-y divide-slate-800/50">
+        <tr *ngFor="let c of campaigns" class="hover:bg-slate-800/40 transition-colors duration-150">
+          <td class="px-6 py-4">
+            <div class="font-semibold text-white text-base">{{ c.name }}</div>
+            <div class="text-xs text-slate-400 mt-0.5">Assunto: {{ c.subject }}</div>
+          </td>
+
+          <td class="px-6 py-4">
+            <div class="text-sm font-medium text-slate-200">{{ c.fromName }}</div>
+            <div class="text-xs text-slate-400 font-mono">{{ c.fromEmail }}</div>
+          </td>
+
+          <td class="px-6 py-4">
+            <span class="px-3 py-1 text-xs font-semibold rounded-full border shadow-sm" [ngClass]="{
+                'bg-slate-500/10 text-slate-400 border-slate-500/30': c.status === 'DRAFT',
+                'bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse': c.status === 'PROCESSING',
+                'bg-emerald-500/10 text-emerald-400 border-emerald-500/30': c.status === 'SENT',
+                'bg-rose-500/10 text-rose-400 border-rose-500/30': c.status === 'FAILED'
+              }">
+              {{ c.status }}
+            </span>
+          </td>
+
+          <td class="px-6 py-4 text-sm font-mono text-slate-300">
+            {{ c._count?.recipients || 0 }}
+          </td>
+
+          <td class="px-6 py-4 text-xs font-mono text-slate-400">
+            {{ c.createdAt | date:'dd/MM/yyyy HH:mm' }}
+          </td>
+
+          <td class="px-6 py-4 text-right space-x-2">
+            <button *ngIf="c.status === 'DRAFT'" (click)="openSendModal(c)" title="Testar, Editar ou Disparar"
+              class="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 rounded-lg border border-indigo-500/30 text-xs font-semibold transition-all inline-flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm">visibility</span> Ver / Disparar
+            </button>
+
+            <button *ngIf="c.status !== 'DRAFT'" (click)="openStatsModal(c)" title="Ver Métricas"
+              class="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 rounded-lg border border-emerald-500/30 text-xs font-semibold transition-all inline-flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm">analytics</span> Relatório
+            </button>
+          </td>
+        </tr>
+
+        <tr *ngIf="campaigns.length === 0">
+          <td colspan="6" class="px-6 py-12 text-center text-slate-500">Nenhuma campanha cadastrada.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 1. Modal Criar Campanha (Com Aba de Preview) -->
+<div *ngIf="showCreateModal"
+  class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+  <div
+    class="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+      <h3 class="text-xl font-bold text-white">Criar Nova Campanha</h3>
+
+      <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+        <button (click)="createTab = 'edit'"
+          [ngClass]="{ 'bg-indigo-600 text-white font-semibold': createTab === 'edit', 'text-slate-400': createTab !== 'edit' }"
+          class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1">
+          <span class="material-symbols-outlined text-sm">code</span> Código / Form
+        </button>
+        <button (click)="createTab = 'preview'"
+          [ngClass]="{ 'bg-indigo-600 text-white font-semibold': createTab === 'preview', 'text-slate-400': createTab !== 'preview' }"
+          class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1">
+          <span class="material-symbols-outlined text-sm">preview</span> Preview Visual
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="errorMessage" class="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm rounded-xl">{{
+      errorMessage }}</div>
+
+    <div *ngIf="createTab === 'edit'" class="space-y-4">
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Nome Interno da Campanha
+          *</label>
+        <input type="text" [(ngModel)]="newCampaign.name" placeholder="Ex: Newsletter Semanal #1"
+          class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Assunto do E-mail *</label>
+        <input type="text" [(ngModel)]="newCampaign.subject" placeholder="Ex: Confira as novidades do ecossistema"
+          class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Nome Remetente</label>
+          <input type="text" [(ngModel)]="newCampaign.fromName"
+            class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">E-mail Remetente</label>
+          <input type="email" [(ngModel)]="newCampaign.fromEmail"
+            class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white" />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Conteúdo HTML *</label>
+        <textarea [(ngModel)]="newCampaign.contentHtml" rows="8"
+          class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-white"></textarea>
+      </div>
+    </div>
+
+    <div *ngIf="createTab === 'preview'" class="space-y-3">
+      <div
+        class="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+        <span><strong>Assunto:</strong> {{ newCampaign.subject || 'Sem assunto' }}</span>
+        <span><strong>De:</strong> {{ newCampaign.fromName }} &lt;{{ newCampaign.fromEmail }}&gt;</span>
+      </div>
+
+      <div
+        class="bg-white rounded-xl p-6 min-h-[300px] max-h-[450px] overflow-y-auto border border-slate-300 text-black shadow-inner">
+        <div [innerHTML]="getSanitizedHtml(newCampaign.contentHtml)"></div>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
+      <button (click)="closeModals()"
+        class="px-4 py-2.5 bg-slate-800 rounded-xl text-sm text-slate-300">Cancelar</button>
+      <button (click)="saveCampaign()" [disabled]="isSaving"
+        class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-sm font-semibold text-white">
+        {{ isSaving ? 'Salvando...' : 'Salvar Rascunho' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Modal Disparar / Editar Pré-envio -->
+<div *ngIf="showSendModal"
+  class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+  <div
+    class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+      <div>
+        <h3 class="text-lg font-bold text-white">Disparo & Pré-visualização</h3>
+        <p class="text-xs text-slate-400">{{ selectedCampaignForSend?.name }}</p>
+      </div>
+
+      <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+        <button (click)="sendTab = 'edit'"
+          [ngClass]="{ 'bg-indigo-600 text-white font-semibold': sendTab === 'edit', 'text-slate-400': sendTab !== 'edit' }"
+          class="px-3 py-1.5 rounded-lg transition-all">
+          Editar / Configurar
+        </button>
+        <button (click)="sendTab = 'preview'"
+          [ngClass]="{ 'bg-indigo-600 text-white font-semibold': sendTab === 'preview', 'text-slate-400': sendTab !== 'preview' }"
+          class="px-3 py-1.5 rounded-lg transition-all">
+          Preview do E-mail
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="errorMessage" class="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm rounded-xl">{{
+      errorMessage }}</div>
+    <div *ngIf="successMessage"
+      class="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm rounded-xl">{{ successMessage
+      }}</div>
+
+    <div *ngIf="sendTab === 'edit'" class="space-y-4">
+      <div class="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-3">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">1. Ajustes Rápidos do Conteúdo</h4>
+        <div>
+          <label class="block text-[11px] text-slate-500 mb-1">Assunto do E-mail:</label>
+          <input type="text" [(ngModel)]="sendSubject"
+            class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-white" />
+        </div>
+        <div>
+          <label class="block text-[11px] text-slate-500 mb-1">HTML da Mensagem:</label>
+          <textarea [(ngModel)]="sendContentHtml" rows="5"
+            class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs font-mono text-white"></textarea>
+        </div>
+      </div>
+
+      <div class="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-3">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">2. Enviar E-mail de Teste</h4>
+        <div class="flex gap-2">
+          <input type="email" [(ngModel)]="testEmail" placeholder="seu.email@empresa.com"
+            class="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-white" />
+          <button (click)="sendTestMail()" [disabled]="isSendingTest"
+            class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700">
+            {{ isSendingTest ? 'Enviando...' : 'Enviar Teste' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">3. Segmentação de Destinatários</h4>
+        <div>
+          <span class="text-xs text-slate-500 block mb-1">Grupos Target:</span>
+          <div class="flex flex-wrap gap-1.5">
+            <button *ngFor="let g of groups" (click)="toggleGroup(g.id)"
+              [ngClass]="{ 'bg-indigo-600 text-white': selectedGroupIds.includes(g.id), 'bg-slate-950 text-slate-400 border-slate-800': !selectedGroupIds.includes(g.id) }"
+              class="px-2.5 py-1 rounded-lg border text-xs">
+              {{ g.name }}
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <span class="text-xs text-slate-500 block mb-1">Interesses Target:</span>
+          <div class="flex flex-wrap gap-1.5">
+            <button *ngFor="let i of interests" (click)="toggleInterest(i.id)"
+              [ngClass]="{ 'bg-emerald-600 text-white': selectedInterestIds.includes(i.id), 'bg-slate-950 text-slate-400 border-slate-800': !selectedInterestIds.includes(i.id) }"
+              class="px-2.5 py-1 rounded-lg border text-xs">
+              {{ i.name }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="sendTab === 'preview'" class="space-y-3">
+      <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-400">
+        <p><strong>Assunto:</strong> {{ sendSubject }}</p>
+      </div>
+
+      <div
+        class="bg-white rounded-xl p-6 min-h-[300px] max-h-[450px] overflow-y-auto border border-slate-300 text-black shadow-inner">
+        <div [innerHTML]="getSanitizedHtml(sendContentHtml)"></div>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-3 pt-3 border-t border-slate-800">
+      <button (click)="closeModals()"
+        class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm transition-all">
+        Cancelar
+      </button>
+
+      <!-- Novo Botão Salvar Alterações -->
+      <button (click)="saveSendModalEdits()" [disabled]="isUpdating || isTriggering"
+        class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-slate-600 rounded-xl text-sm font-medium transition-all">
+        {{ isUpdating ? 'Salvando...' : 'Salvar Alterações' }}
+      </button>
+
+      <button *ngIf="role === 'ADMIN'" (click)="triggerCampaign()" [disabled]="isTriggering || isUpdating"
+        class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-sm font-semibold text-white shadow-lg shadow-indigo-600/20 transition-all">
+        {{ isTriggering ? 'Iniciando...' : 'Confirmar e Disparar' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Modal de Relatório e Estatísticas -->
+<div *ngIf="showStatsModal"
+  class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-6">
+    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+      <div>
+        <h3 class="text-xl font-bold text-white">Relatório da Campanha</h3>
+        <p class="text-xs text-slate-400">{{ selectedCampaignStats?.campaignName }}</p>
+      </div>
+      <button (click)="closeModals()" class="text-slate-400 hover:text-white">✕</button>
+    </div>
+
+    <div *ngIf="isLoadingStats" class="flex justify-center py-12">
+      <div class="animate-spin h-8 w-8 border-4 border-indigo-500 border-t-transparent rounded-full"></div>
+    </div>
+
+    <div *ngIf="!isLoadingStats && selectedCampaignStats" class="space-y-6">
+      <div class="grid grid-cols-3 gap-4">
+        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center">
+          <p class="text-xs font-bold uppercase text-slate-400">Taxa de Entrega</p>
+          <p class="text-2xl font-extrabold text-emerald-400 mt-1">{{ selectedCampaignStats.rates.deliveryRate }}</p>
+        </div>
+        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center">
+          <p class="text-xs font-bold uppercase text-slate-400">Taxa de Abertura</p>
+          <p class="text-2xl font-extrabold text-indigo-400 mt-1">{{ selectedCampaignStats.rates.openRate }}</p>
+        </div>
+        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center">
+          <p class="text-xs font-bold uppercase text-slate-400">Taxa de Clique</p>
+          <p class="text-2xl font-extrabold text-sky-400 mt-1">{{ selectedCampaignStats.rates.clickRate }}</p>
+        </div>
+      </div>
+
+      <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800/80 pb-2">Volume
+          de Envios e Interações</h4>
+
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div class="flex justify-between py-1 border-b border-slate-900">
+            <span class="text-slate-400">Total Recipientes:</span>
+            <span class="font-mono text-white font-semibold">{{ selectedCampaignStats.metrics.totalRecipients }}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-900">
+            <span class="text-slate-400">Enviados:</span>
+            <span class="font-mono text-white font-semibold">{{ selectedCampaignStats.metrics.sent }}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-900">
+            <span class="text-slate-400">Entregues com Sucesso:</span>
+            <span class="font-mono text-emerald-400 font-semibold">{{ selectedCampaignStats.metrics.delivered }}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-900">
+            <span class="text-slate-400">Bounces (Falhas):</span>
+            <span class="font-mono text-rose-400 font-semibold">{{ selectedCampaignStats.metrics.bounced }}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-900">
+            <span class="text-slate-400">Aberturas Únicas:</span>
+            <span class="font-mono text-indigo-400 font-semibold">{{ selectedCampaignStats.metrics.uniqueOpens }}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-900">
+            <span class="text-slate-400">Cliques Únicos:</span>
+            <span class="font-mono text-sky-400 font-semibold">{{ selectedCampaignStats.metrics.uniqueClicks }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-end pt-3 border-t border-slate-800">
+      <button (click)="closeModals()"
+        class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-sm font-medium">
+        Fechar Relatório
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,143 @@
+<div class="p-8">
+  <header class="mb-8">
+    <h2 class="text-3xl font-extrabold text-white tracking-tight">Grupos & Interesses</h2>
+    <p class="text-slate-400 text-sm mt-1">Organize e segmentar sua base de contatos para envio de e-mails direcionados</p>
+  </header>
+
+  <!-- Grid lado a lado: Grupos e Interesses -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    
+    <!-- Bloco de Grupos -->
+    <div class="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl p-6">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-indigo-400">group</span>
+          <h3 class="text-xl font-bold text-white">Grupos</h3>
+        </div>
+        <button
+          (click)="openGroupModal()"
+          class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-xs shadow-lg shadow-indigo-600/20 border border-indigo-400/30 transition-all flex items-center gap-1.5"
+        >
+          <span class="material-symbols-outlined text-sm">add</span> Novo Grupo
+        </button>
+      </div>
+
+      <div *ngIf="isLoadingGroups" class="flex justify-center py-8">
+        <div class="animate-spin h-7 w-7 border-4 border-indigo-500 border-t-transparent rounded-full"></div>
+      </div>
+
+      <div *ngIf="!isLoadingGroups" class="space-y-3">
+        <div *ngFor="let g of groups" class="p-4 bg-slate-950/70 rounded-xl border border-slate-800/80 flex items-center justify-between hover:border-slate-700 transition-all">
+          <div>
+            <p class="font-semibold text-white text-base">{{ g.name }}</p>
+            <p class="text-xs text-slate-400 mt-0.5">{{ g.description || 'Sem descrição.' }}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-semibold rounded-lg">
+              {{ g._count?.contacts || 0 }} contatos
+            </span>
+          </div>
+        </div>
+
+        <p *ngIf="groups.length === 0" class="text-center py-8 text-slate-500 text-sm">Nenhum grupo cadastrado.</p>
+      </div>
+    </div>
+
+    <!-- Bloco de Interesses -->
+    <div class="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl p-6">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-emerald-400">sell</span>
+          <h3 class="text-xl font-bold text-white">Interesses</h3>
+        </div>
+        <button
+          (click)="openInterestModal()"
+          class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl text-xs shadow-lg shadow-emerald-600/20 border border-emerald-400/30 transition-all flex items-center gap-1.5"
+        >
+          <span class="material-symbols-outlined text-sm">add</span> Novo Interesse
+        </button>
+      </div>
+
+      <div *ngIf="isLoadingInterests" class="flex justify-center py-8">
+        <div class="animate-spin h-7 w-7 border-4 border-emerald-500 border-t-transparent rounded-full"></div>
+      </div>
+
+      <div *ngIf="!isLoadingInterests" class="space-y-3">
+        <div *ngFor="let i of interests" class="p-4 bg-slate-950/70 rounded-xl border border-slate-800/80 flex items-center justify-between hover:border-slate-700 transition-all">
+          <div>
+            <p class="font-semibold text-white text-base">{{ i.name }}</p>
+            <p class="text-xs text-slate-400 mt-0.5">{{ i.description || 'Sem descrição.' }}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold rounded-lg">
+              {{ i._count?.contacts || 0 }} contatos
+            </span>
+          </div>
+        </div>
+
+        <p *ngIf="interests.length === 0" class="text-center py-8 text-slate-500 text-sm">Nenhum interesse cadastrado.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal Novo Grupo -->
+<div *ngIf="showGroupModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+      <h3 class="text-lg font-bold text-white">Criar Novo Grupo</h3>
+      <button (click)="showGroupModal = false" class="text-slate-400 hover:text-white">✕</button>
+    </div>
+
+    <div *ngIf="errorMessage" class="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm rounded-xl">{{ errorMessage }}</div>
+
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Nome do Grupo *</label>
+        <input type="text" [(ngModel)]="newGroup.name" placeholder="Ex: Clientes VIP" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500" />
+      </div>
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Descrição</label>
+        <input type="text" [(ngModel)]="newGroup.description" placeholder="Ex: Clientes com alto volume de compra" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500" />
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-3 pt-3 border-t border-slate-800">
+      <button (click)="showGroupModal = false" class="px-4 py-2 bg-slate-800 rounded-xl text-sm text-slate-300">Cancelar</button>
+      <button (click)="saveGroup()" [disabled]="isSaving" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-sm font-semibold text-white">
+        {{ isSaving ? 'Salvando...' : 'Criar Grupo' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Novo Interesse -->
+<div *ngIf="showInterestModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+      <h3 class="text-lg font-bold text-white">Criar Novo Interesse</h3>
+      <button (click)="showInterestModal = false" class="text-slate-400 hover:text-white">✕</button>
+    </div>
+
+    <div *ngIf="errorMessage" class="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm rounded-xl">{{ errorMessage }}</div>
+
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Nome do Interesse *</label>
+        <input type="text" [(ngModel)]="newInterest.name" placeholder="Ex: Nira" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500" />
+      </div>
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Descrição</label>
+        <input type="text" [(ngModel)]="newInterest.description" placeholder="Ex: Interessados na linha Nira" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500" />
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-3 pt-3 border-t border-slate-800">
+      <button (click)="showInterestModal = false" class="px-4 py-2 bg-slate-800 rounded-xl text-sm text-slate-300">Cancelar</button>
+      <button (click)="saveInterest()" [disabled]="isSaving" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-sm font-semibold text-white">
+        {{ isSaving ? 'Salvando...' : 'Criar Interesse' }}
+      </button>
+    </div>
+  </div>
+</div>

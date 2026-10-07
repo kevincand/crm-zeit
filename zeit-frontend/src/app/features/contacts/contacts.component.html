@@ -1,0 +1,352 @@
+<div class="p-8">
+  <!-- Header sem sidebar duplicada -->
+  <header class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <h2 class="text-3xl font-extrabold text-white tracking-tight">Gestão de Contatos</h2>
+      <p class="text-slate-400 text-sm mt-1">Gerencie a base de leads, observações e dados de segmentação</p>
+    </div>
+
+    <button (click)="openCreateModal()"
+      class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-sm shadow-lg shadow-indigo-600/25 border border-indigo-400/30 transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.02] flex items-center gap-2">
+      <span class="material-symbols-outlined">person_add</span> Novo Contato
+    </button>
+  </header>
+
+  <!-- Filtros -->
+  <div
+    class="bg-slate-900/60 backdrop-blur-md p-4 rounded-2xl border border-slate-800 shadow-xl mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+    <input type="text" [(ngModel)]="search" (input)="loadContacts()" placeholder="Buscar por nome, e-mail ou empresa..."
+      class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500" />
+
+    <select [(ngModel)]="selectedGroupId" (change)="loadContacts()"
+      class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white">
+      <option value="">Todos os Grupos</option>
+      <option *ngFor="let g of groups" [value]="g.id">{{ g.name }}</option>
+    </select>
+
+    <select [(ngModel)]="selectedInterestId" (change)="loadContacts()"
+      class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white">
+      <option value="">Todos os Interesses</option>
+      <option *ngFor="let i of interests" [value]="i.id">{{ i.name }}</option>
+    </select>
+  </div>
+
+  <!-- Tabela com Ações (Ver Detalhes e Editar) -->
+  <div class="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl overflow-hidden">
+    <div *ngIf="isLoading" class="flex justify-center py-16">
+      <div class="animate-spin h-9 w-9 border-4 border-indigo-500 border-t-transparent rounded-full"></div>
+    </div>
+
+    <table *ngIf="!isLoading" class="w-full text-left text-sm text-slate-300">
+      <thead
+        class="bg-slate-950/60 uppercase text-[11px] font-bold tracking-wider text-slate-400 border-b border-slate-800">
+        <tr>
+          <th class="px-6 py-4">Nome / E-mail</th>
+          <th class="px-6 py-4">Empresa / UF</th>
+          <th class="px-6 py-4">Grupos & Interesses</th>
+          <th class="px-6 py-4">Status</th>
+          <th class="px-6 py-4">Cadastrado Por</th>
+          <th class="px-6 py-4 text-right">Ações</th>
+        </tr>
+      </thead>
+
+      <tbody class="divide-y divide-slate-800/50">
+        <tr *ngFor="let c of contacts" class="hover:bg-slate-800/40 transition-colors duration-150">
+          <td class="px-6 py-4">
+            <div class="font-semibold text-white text-base">{{ c.name }}</div>
+            <div class="text-xs text-slate-400 font-mono">{{ c.email }}</div>
+          </td>
+
+          <td class="px-6 py-4">
+            <div class="font-medium text-slate-200">{{ c.company || '-' }}</div>
+            <div class="text-xs text-slate-400" *ngIf="c.uf">UF: {{ c.uf }}</div>
+          </td>
+
+          <td class="px-6 py-4">
+            <div class="flex flex-wrap gap-1">
+              <span *ngFor="let g of c.groups"
+                class="px-2 py-0.5 bg-slate-800 border border-slate-700 text-[11px] rounded text-indigo-300">
+                {{ g.group.name }}
+              </span>
+              <span *ngFor="let i of c.interests"
+                class="px-2 py-0.5 bg-emerald-950/40 border border-emerald-800 text-[11px] rounded text-emerald-300">
+                {{ i.interest.name }}
+              </span>
+            </div>
+          </td>
+
+          <td class="px-6 py-4">
+            <button type="button" (click)="openSubscriptionModal(c)"
+              class="px-3 py-1 text-xs font-semibold rounded-full border shadow-sm transition-all duration-200 inline-flex items-center gap-1.5 group"
+              [ngClass]="{
+      'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-rose-500/20 hover:text-rose-300 hover:border-rose-500/50 cursor-pointer hover:scale-105': c.subscription?.status === 'SUBSCRIBED',
+      'bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/50 cursor-pointer hover:scale-105': c.subscription?.status === 'UNSUBSCRIBED',
+      'bg-rose-500/10 text-rose-400 border-rose-500/30 cursor-not-allowed opacity-80': c.subscription?.status === 'HARD_BOUNCE' || c.subscription?.status === 'COMPLAINT'
+    }" [title]="c.subscription?.status === 'SUBSCRIBED' ? 'Clique para descadastrar do recebimento de e-mails' : (c.subscription?.status === 'UNSUBSCRIBED' ? 'Clique para reativar a inscrição' : 'Status bloqueado para disparo')">
+              <span>{{ c.subscription?.status || 'N/A' }}</span>
+            </button>
+          </td>
+          <td class="px-6 py-4 text-xs text-slate-300">
+            {{ c.createdBy?.name || 'Sistema' }}
+          </td>
+
+          <!-- Botões de Ação -->
+          <td class="px-6 py-4 text-right space-x-2 flex justify-end">
+            <button (click)="viewDetails(c)" title="Ver Detalhes"
+              class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition-all">
+              <span class="material-symbols-outlined">zoom_in</span>
+            </button>
+            <button (click)="openEditModal(c)" title="Editar Contato"
+              class="p-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 rounded-lg border border-indigo-500/30 transition-all">
+              <span class="material-symbols-outlined">edit</span>
+            </button>
+            <!-- Botão na tabela -->
+            <button (click)="openDeleteModal(c)" title="Excluir Contato"
+              class="p-2 bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 rounded-lg border border-rose-500/30 transition-all">
+              <span class="material-symbols-outlined text-base">delete</span>
+            </button>
+          </td>
+        </tr>
+
+        <tr *ngIf="contacts.length === 0">
+          <td colspan="6" class="px-6 py-12 text-center text-slate-500">Nenhum contato encontrado.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal de Detalhes Completo -->
+<div *ngIf="selectedContactDetails"
+  class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4">
+    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+      <h3 class="text-xl font-bold text-white">Detalhes do Contato</h3>
+      <button (click)="closeDetails()" class="text-slate-400 hover:text-white">✕</button>
+    </div>
+
+    <div class="space-y-3 text-sm">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <span class="text-xs uppercase font-bold text-slate-500 block">Nome</span>
+          <span class="text-white font-medium">{{ selectedContactDetails.name }}</span>
+        </div>
+        <div>
+          <span class="text-xs uppercase font-bold text-slate-500 block">E-mail</span>
+          <span class="text-slate-300 font-mono">{{ selectedContactDetails.email }}</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-4">
+        <div>
+          <span class="text-xs uppercase font-bold text-slate-500 block">Telefone</span>
+          <span class="text-slate-300">{{ selectedContactDetails.phone || '-' }}</span>
+        </div>
+        <div>
+          <span class="text-xs uppercase font-bold text-slate-500 block">Empresa</span>
+          <span class="text-slate-300">{{ selectedContactDetails.company || '-' }}</span>
+        </div>
+        <div>
+          <span class="text-xs uppercase font-bold text-slate-500 block">UF</span>
+          <span class="text-slate-300">{{ selectedContactDetails.uf || '-' }}</span>
+        </div>
+      </div>
+
+      <div>
+        <span class="text-xs uppercase font-bold text-slate-500 block mb-1">Descrição</span>
+        <p class="p-3 bg-slate-950 rounded-xl border border-slate-800 text-slate-300">{{
+          selectedContactDetails.description || 'Nenhuma descrição informada.' }}</p>
+      </div>
+
+      <div>
+        <span class="text-xs uppercase font-bold text-slate-500 block mb-1">Observações Internas</span>
+        <p class="p-3 bg-slate-950 rounded-xl border border-slate-800 text-slate-300">{{ selectedContactDetails.notes ||
+          'Sem observações cadastradas.' }}</p>
+      </div>
+    </div>
+
+    <div class="pt-4 border-t border-slate-800 flex justify-end">
+      <button (click)="closeDetails()"
+        class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-sm font-medium">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div *ngIf="showDeleteModal"
+  class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+    <div class="flex items-center gap-3 text-rose-400">
+      <span class="material-symbols-outlined text-3xl">warning</span>
+      <h3 class="text-lg font-bold text-white">Confirmar Exclusão</h3>
+    </div>
+
+    <p class="text-sm text-slate-300">
+      Tem certeza de que deseja remover o contato <strong class="text-white">{{ contactToDelete?.name }}</strong>?
+    </p>
+
+    <div class="flex justify-end gap-3 pt-3 border-t border-slate-800">
+      <button (click)="closeDeleteModal()"
+        class="px-4 py-2 bg-slate-800 rounded-xl text-sm text-slate-300">Cancelar</button>
+      <button (click)="confirmDelete()" [disabled]="isDeleting"
+        class="px-5 py-2 bg-rose-600 hover:bg-rose-500 rounded-xl text-sm font-semibold text-white">
+        {{ isDeleting ? 'Excluindo...' : 'Sim, Excluir' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Formulário (Criação / Edição) -->
+<div *ngIf="showModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+  <div
+    class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+      <h3 class="text-xl font-bold text-white">{{ editingContactId ? 'Editar Contato' : 'Cadastrar Novo Contato' }}</h3>
+      <button (click)="closeModal()" class="text-slate-400 hover:text-white">✕</button>
+    </div>
+
+    <div *ngIf="errorMessage" class="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm rounded-xl">{{
+      errorMessage }}</div>
+
+    <div class="space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Nome Completo *</label>
+          <input type="text" [(ngModel)]="formContact.name"
+            class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">E-mail *</label>
+          <input type="email" [(ngModel)]="formContact.email"
+            class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Telefone</label>
+          <input type="text" [(ngModel)]="formContact.phone"
+            class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Empresa</label>
+          <input type="text" [(ngModel)]="formContact.company"
+            class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">UF</label>
+          <input type="text" [(ngModel)]="formContact.uf" (input)="formatUf()" maxlength="2"
+            class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white" />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Vincular Aos Grupos</label>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" *ngFor="let g of groups" (click)="toggleSelection(formContact.groupIds, g.id)"
+            [ngClass]="{
+              'bg-indigo-600 text-white': isSelected(formContact.groupIds, g.id),
+              'bg-slate-950 text-slate-400 border-slate-800': !isSelected(formContact.groupIds, g.id)
+            }" class="px-3 py-1.5 rounded-xl border text-xs font-medium">
+            {{ isSelected(formContact.groupIds, g.id) ? '✓ ' : '+ ' }}{{ g.name }}
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Interesses do
+          Contato</label>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" *ngFor="let i of interests" (click)="toggleSelection(formContact.interestIds, i.id)"
+            [ngClass]="{
+              'bg-emerald-600 text-white': isSelected(formContact.interestIds, i.id),
+              'bg-slate-950 text-slate-400 border-slate-800': !isSelected(formContact.interestIds, i.id)
+            }" class="px-3 py-1.5 rounded-xl border text-xs font-medium">
+            {{ isSelected(formContact.interestIds, i.id) ? '✓ ' : '+ ' }}{{ i.name }}
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Descrição</label>
+        <input type="text" [(ngModel)]="formContact.description"
+          class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Observações Internas</label>
+        <textarea [(ngModel)]="formContact.notes" rows="2"
+          class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white"></textarea>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
+      <button (click)="closeModal()"
+        class="px-4 py-2.5 bg-slate-800 rounded-xl text-sm text-slate-300">Cancelar</button>
+      <button (click)="saveContact()" [disabled]="isSaving"
+        class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-sm font-semibold text-white">
+        {{ isSaving ? 'Salvando...' : 'Salvar Contato' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmação de Descadastro de Marketing -->
+<div *ngIf="showUnsubscribeModal"
+  class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+    <div class="flex items-center gap-3 text-amber-400">
+      <span class="material-symbols-outlined text-3xl">unsubscribe</span>
+      <h3 class="text-lg font-bold text-white">Cancelar Inscrição de Marketing</h3>
+    </div>
+
+    <p class="text-sm text-slate-300">
+      Deseja descadastrar o contato <strong class="text-white">{{ contactToUnsubscribe?.name }}</strong> (<span
+        class="font-mono text-slate-400">{{ contactToUnsubscribe?.email }}</span>)?
+    </p>
+    <p class="text-xs text-slate-500">
+      O registro permanecerá no CRM, mas ele deixará de receber novas campanhas de e-mail marketing.
+    </p>
+
+    <div class="flex justify-end gap-3 pt-3 border-t border-slate-800">
+      <button (click)="closeUnsubscribeModal()"
+        class="px-4 py-2 bg-slate-800 rounded-xl text-sm text-slate-300 hover:bg-slate-700 transition-all">
+        Voltar
+      </button>
+      <button (click)="confirmUnsubscribe()" [disabled]="isUnsubscribing"
+        class="px-5 py-2 bg-amber-600 hover:bg-amber-500 rounded-xl text-sm font-semibold text-white shadow-lg shadow-amber-600/20 transition-all">
+        {{ isUnsubscribing ? 'Descadastrando...' : 'Confirmar Descadastro' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmação de Reativação de Inscrição -->
+<div *ngIf="showResubscribeModal"
+  class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+    <div class="flex items-center gap-3 text-emerald-400">
+      <span class="material-symbols-outlined text-3xl">mark_email_read</span>
+      <h3 class="text-lg font-bold text-white">Reativar Inscrição</h3>
+    </div>
+
+    <p class="text-sm text-slate-300">
+      Deseja reativar a assinatura do contato <strong class="text-white">{{ contactToResubscribe?.name }}</strong>
+      (<span class="font-mono text-slate-400">{{ contactToResubscribe?.email }}</span>)?
+    </p>
+    <p class="text-xs text-slate-500">
+      Ao reativar, este contato voltará a estar elegível para receber campanhas de e-mail marketing.
+    </p>
+
+    <div class="flex justify-end gap-3 pt-3 border-t border-slate-800">
+      <button (click)="closeResubscribeModal()"
+        class="px-4 py-2 bg-slate-800 rounded-xl text-sm text-slate-300 hover:bg-slate-700 transition-all">
+        Voltar
+      </button>
+      <button (click)="confirmResubscribe()" [disabled]="isResubscribing"
+        class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition-all">
+        {{ isResubscribing ? 'Reativando...' : 'Confirmar Reativação' }}
+      </button>
+    </div>
+  </div>
+</div>

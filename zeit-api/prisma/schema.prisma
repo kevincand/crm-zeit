@@ -1,0 +1,346 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Get a free hosted Postgres database in seconds: `npx create-db`
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+  moduleFormat = "cjs"
+  importFileExtension = "ts"
+}
+datasource db {
+  provider = "postgresql"
+}
+// ============================================================
+// USER
+// ============================================================
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         UserRole @default(MARKETING)
+  active       Boolean  @default(true)
+  lastLoginAt DateTime? @map("last_login_at") @db.Timestamptz(6)
+  contactsCreated Contact[]  @relation("ContactCreatedBy")
+  campaigns       Campaign[] @relation("CampaignCreatedBy")
+  auditLogs       AuditLog[]
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  @@index([active])
+  @@map("users")
+}
+enum UserRole {
+  ADMIN
+  MARKETING
+}
+enum LeadOrigin {
+  INSTAGRAM
+  WHATSAPP
+  OTHER
+}
+enum OccupationalProfile {
+  VETERINARIO
+  PRODUTOR_PECUARISTA
+  ZOOTECNISTA
+  TECNICO
+  CONSULTOR
+  OTHER
+}
+enum FunnelStage {
+  FIRST_CONTACT       // 1 - primeiro contato
+  QUALIFIED           // 2 - qualificado
+  PROPOSAL            // 3 - proposta
+  WON                 // 4 - ganho
+  LOST                // 4 - perdido
+}
+enum LossReason {
+  PRICE
+  TIMING
+  COMPETITION
+  OTHER
+}
+// ============================================================
+// CONTACT
+// ============================================================
+model Contact {
+  id String @id @default(uuid()) @db.Uuid
+  name            String
+  email           String? @unique
+  phone           String?
+  company         String? // Nome da empresa
+  sector          String? // Setor
+  city            String? // Cidade
+  uf              String? // Região/País
+  document        String?              @unique // CPF ou CNPJ
+  origin          LeadOrigin?          // Instagram ou WhatsApp
+  profile         String? // OccupationalProfile? // Veterinário, Produtor, etc.
+  // Funil e Comercial
+  funnelStage     FunnelStage          @default(FIRST_CONTACT)
+  lossReason      LossReason?          // Preenchido se LOST
+  proposalNotes   String?              // Ex: "Ligar após a safra"
+  lastContactAt   DateTime?            //Data da última atividade
+  nextContactAt   DateTime?
+  description     String?              // Observações
+  notes           String?              // phone2 // Notas
+  
+  deletedAt DateTime?
+  createdById String @map("created_by") @db.Uuid
+  createdBy User @relation("ContactCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  subscription Subscription?
+  groups     ContactGroup[]
+  interests  ContactInterest[]
+  recipients CampaignRecipient[]
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  @@index([name])
+  @@index([company])
+  @@index([uf])
+  @@index([createdById])
+  @@map("contacts")
+}
+// ============================================================
+// SUBSCRIPTION
+// ============================================================
+model Subscription {
+  id String @id @default(uuid()) @db.Uuid
+  contactId String @unique @map("contact_id") @db.Uuid
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  status SubscriptionStatus @default(SUBSCRIBED)
+  subscribedAt   DateTime? @map("subscribed_at") @db.Timestamptz(6)
+  unsubscribedAt DateTime? @map("unsubscribed_at") @db.Timestamptz(6)
+  resubscribedAt DateTime? @map("resubscribed_at") @db.Timestamptz(6)
+  source String?
+  events            SubscriptionEvent[]
+  unsubscribeTokens UnsubscribeToken[]
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  @@index([status])
+  @@index([subscribedAt])
+  @@map("subscriptions")
+}
+enum SubscriptionStatus {
+  SUBSCRIBED
+  UNSUBSCRIBED
+  COMPLAINT
+  HARD_BOUNCE
+}
+// ============================================================
+// SUBSCRIPTION EVENT
+// ============================================================
+model SubscriptionEvent {
+  id String @id @default(uuid()) @db.Uuid
+  subscriptionId String @map("subscription_id") @db.Uuid
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  type SubscriptionEventType
+  source String?
+  metadata Json?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@index([subscriptionId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("subscription_events")
+}
+enum SubscriptionEventType {
+  SUBSCRIBE_REQUESTED
+  SUBSCRIBED
+  UNSUBSCRIBED
+  RESUBSCRIBED
+  COMPLAINT
+  HARD_BOUNCE
+}
+// ============================================================
+// GROUP
+// ============================================================
+model Group {
+  id String @id @default(uuid()) @db.Uuid
+  name        String  @unique
+  description String?
+  active      Boolean @default(true)
+  contacts ContactGroup[]
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  @@index([active])
+  @@map("groups")
+}
+// ============================================================
+// CONTACT GROUP
+// ============================================================
+model ContactGroup {
+  contactId String @map("contact_id") @db.Uuid
+  groupId   String @map("group_id") @db.Uuid
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@id([contactId, groupId])
+  @@index([groupId])
+  @@map("contact_groups")
+}
+// ============================================================
+// INTEREST
+// ============================================================
+model Interest {
+  id String @id @default(uuid()) @db.Uuid
+  name        String  @unique
+  description String?
+  active      Boolean @default(true)
+  contacts ContactInterest[]
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  @@index([active])
+  @@map("interests")
+}
+// ============================================================
+// CONTACT INTEREST
+// ============================================================
+model ContactInterest {
+  contactId  String @map("contact_id") @db.Uuid
+  interestId String @map("interest_id") @db.Uuid
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  interest Interest @relation(fields: [interestId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@id([contactId, interestId])
+  @@index([interestId])
+  @@map("contact_interests")
+}
+// ============================================================
+// CAMPAIGN
+// ============================================================
+model Campaign {
+  id String @id @default(uuid()) @db.Uuid
+  name      String
+  subject   String
+  fromName  String @map("from_name")
+  fromEmail String @map("from_email")
+  contentHtml String @map("content_html")
+  status CampaignStatus @default(DRAFT)
+  scheduledAt DateTime? @map("scheduled_at") @db.Timestamptz(6)
+  startedAt   DateTime? @map("started_at") @db.Timestamptz(6)
+  finishedAt  DateTime? @map("finished_at") @db.Timestamptz(6)
+  createdById String @map("created_by") @db.Uuid
+  createdBy User @relation("CampaignCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  recipients CampaignRecipient[]
+  links      EmailLink[]
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([createdById])
+  @@map("campaigns")
+}
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  PROCESSING
+  SENT
+  CANCELLED
+  FAILED
+}
+// ============================================================
+// CAMPAIGN RECIPIENT
+// ============================================================
+model CampaignRecipient {
+  id String @id @default(uuid()) @db.Uuid
+  campaignId String @map("campaign_id") @db.Uuid
+  contactId  String @map("contact_id") @db.Uuid
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  email String
+  status CampaignRecipientStatus @default(QUEUED)
+  providerMessageId String? @map("provider_message_id")
+  queuedAt    DateTime? @map("queued_at") @db.Timestamptz(6)
+  sentAt      DateTime? @map("sent_at") @db.Timestamptz(6)
+  deliveredAt DateTime? @map("delivered_at") @db.Timestamptz(6)
+  events EmailEvent[]
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  @@unique([campaignId, contactId])
+  @@index([campaignId])
+  @@index([contactId])
+  @@index([status])
+  @@index([providerMessageId])
+  @@map("campaign_recipients")
+}
+enum CampaignRecipientStatus {
+  QUEUED
+  SENDING
+  SENT
+  DELIVERED
+  BOUNCED
+  COMPLAINT
+  FAILED
+  SKIPPED
+}
+// ============================================================
+// EMAIL EVENT
+// ============================================================
+model EmailEvent {
+  id String @id @default(uuid()) @db.Uuid
+  campaignRecipientId String @map("campaign_recipient_id") @db.Uuid
+  campaignRecipient CampaignRecipient @relation(fields: [campaignRecipientId], references: [id], onDelete: Cascade)
+  type EmailEventType
+  occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  ip        String?
+  userAgent String? @map("user_agent")
+  metadata Json?
+  @@index([campaignRecipientId])
+  @@index([type])
+  @@index([occurredAt])
+  @@map("email_events")
+}
+enum EmailEventType {
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  BOUNCED
+  COMPLAINT
+  UNSUBSCRIBED
+}
+// ============================================================
+// EMAIL LINK
+// ============================================================
+model EmailLink {
+  id String @id @default(uuid()) @db.Uuid
+  campaignId String @map("campaign_id") @db.Uuid
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  url String
+  label String?
+  identifier String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@unique([campaignId, identifier])
+  @@index([campaignId])
+  @@map("email_links")
+}
+// ============================================================
+// UNSUBSCRIBE TOKEN
+// ============================================================
+model UnsubscribeToken {
+  id String @id @default(uuid()) @db.Uuid
+  subscriptionId String @map("subscription_id") @db.Uuid
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  tokenHash String @unique @map("token_hash")
+  expiresAt DateTime? @map("expires_at") @db.Timestamptz(6)
+  usedAt DateTime? @map("used_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@index([subscriptionId])
+  @@index([expiresAt])
+  @@map("unsubscribe_tokens")
+}
+// ============================================================
+// AUDIT LOG
+// ============================================================
+model AuditLog {
+  id String @id @default(uuid()) @db.Uuid
+  userId String? @map("user_id") @db.Uuid
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action String
+  entity String
+  entityId String? @map("entity_id")
+  metadata Json?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@index([userId])
+  @@index([entity])
+  @@index([entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

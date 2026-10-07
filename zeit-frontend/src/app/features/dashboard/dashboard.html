@@ -1,0 +1,38 @@
+<div class="p-8">
+  <header class="mb-8 flex items-center justify-between">
+    <div>
+      <h2 class="text-3xl font-extrabold text-white tracking-tight">Dashboard</h2>
+      <p class="text-slate-400 text-sm mt-1">Visão geral das estatísticas da sua base de contatos</p>
+    </div>
+    <button (click)="loadStats()"
+      class="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-sm text-slate-300 transition-colors flex gap-2">
+      <span class="material-symbols-outlined">cached</span> Atualizar
+    </button>
+  </header>
+
+  <div *ngIf="isLoading" class="flex justify-center py-16">
+    <div class="animate-spin h-8 w-8 border-4 border-indigo-500 border-t-transparent rounded-full"></div>
+  </div>
+
+  <div *ngIf="!isLoading && stats" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-800 shadow-xl">
+      <p class="text-xs font-semibold uppercase text-slate-400">Total de Contatos</p>
+      <p class="text-3xl font-bold text-white mt-2">{{ stats.contacts.total }}</p>
+    </div>
+
+    <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-800 shadow-xl">
+      <p class="text-xs font-semibold uppercase text-emerald-400">Inscritos Ativos</p>
+      <p class="text-3xl font-bold text-emerald-400 mt-2">{{ stats.contacts.activeSubscribers }}</p>
+    </div>
+
+    <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-800 shadow-xl">
+      <p class="text-xs font-semibold uppercase text-amber-400">Descadastrados</p>
+      <p class="text-3xl font-bold text-amber-400 mt-2">{{ stats.contacts.unsubscribed }}</p>
+    </div>
+
+    <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-800 shadow-xl">
+      <p class="text-xs font-semibold uppercase text-indigo-400">Campanhas Criadas</p>
+      <p class="text-3xl font-bold text-indigo-400 mt-2">{{ stats.totalCampaigns }}</p>
+    </div>
+  </div>
+</div>

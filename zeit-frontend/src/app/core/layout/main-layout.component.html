@@ -1,0 +1,105 @@
+<div class="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row font-sans antialiased relative">
+  <!-- Barra Superior Mobile (exibida apenas abaixo de 'md') -->
+  <header
+    class="md:hidden bg-slate-900 border-b border-slate-800 p-4 flex items-center justify-between z-30 sticky top-0">
+    <div class="flex items-center gap-3">
+      <button (click)="toggleMobileMenu()"
+        class="p-2 text-slate-300 hover:text-white bg-slate-800 rounded-xl border border-slate-700/60 focus:outline-none flex items-center justify-center"
+        title="Abrir Menu">
+        <span class="material-symbols-outlined text-xl block">menu</span>
+      </button>
+      <img src="assets/nova_zeit_branco.png" alt="Zeit Logo" class="h-8 w-auto object-contain" />
+    </div>
+  </header>
+
+  <!-- Overlay escuro para fechar ao clicar fora (Mobile) -->
+  <div *ngIf="isMobileMenuOpen" (click)="closeMobileMenu()"
+    class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 md:hidden transition-opacity"></div>
+
+  <!-- Sidebar (Deslizante no Mobile, Fixa no Desktop) -->
+  <aside [ngClass]="{
+      'translate-x-0': isMobileMenuOpen,
+      '-translate-x-full': !isMobileMenuOpen
+    }"
+    class="fixed inset-y-0 left-0 z-50 w-64 bg-slate-900/95 backdrop-blur-md border-r border-slate-800 flex flex-col justify-between p-5 shadow-2xl transition-transform duration-300 ease-in-out md:sticky md:top-0 md:self-start md:translate-x-0 h-full min-h-screen">
+    <div>
+      <!-- Logo & Botão Fechar (Mobile) -->
+      <div class="px-2 py-3 border-b border-slate-800 mb-6 flex items-center justify-between">
+        <img src="assets/nova_zeit_branco.png" alt="Zeit Logo" class="h-20 w-auto object-contain" />
+        <button (click)="closeMobileMenu()" class="md:hidden text-slate-400 hover:text-white p-1">
+          <span class="material-symbols-outlined text-lg">close</span>
+        </button>
+      </div>
+
+      <!-- Navegação Global (Com evento (click)="closeMobileMenu()" para auto-fechar) -->
+      <nav class="space-y-2">
+        <a routerLink="/dashboard" (click)="closeMobileMenu()"
+          routerLinkActive="bg-indigo-600/20 border-indigo-500/50 text-indigo-300 font-semibold shadow-lg shadow-indigo-600/10"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="flex items-center gap-3 px-4 py-3 rounded-xl border border-transparent text-slate-400 hover:text-white hover:bg-slate-800/60 hover:border-slate-700/50 hover:-translate-y-0.5 hover:scale-[1.01] transition-all duration-200">
+          <span class="material-symbols-outlined">view_kanban</span>
+          <span class="text-sm">Dashboard</span>
+        </a>
+
+        <a routerLink="/contacts" (click)="closeMobileMenu()"
+          routerLinkActive="bg-indigo-600/20 border-indigo-500/50 text-indigo-300 font-semibold shadow-lg shadow-indigo-600/10"
+          class="flex items-center gap-3 px-4 py-3 rounded-xl border border-transparent text-slate-400 hover:text-white hover:bg-slate-800/60 hover:border-slate-700/50 hover:-translate-y-0.5 hover:scale-[1.01] transition-all duration-200">
+          <span class="material-symbols-outlined">person</span>
+          <span class="text-sm">Contatos</span>
+        </a>
+
+        <a routerLink="/groups-interests" (click)="closeMobileMenu()"
+          routerLinkActive="bg-indigo-600/20 border-indigo-500/50 text-indigo-300 font-semibold shadow-lg shadow-indigo-600/10"
+          class="flex items-center gap-3 px-4 py-3 rounded-xl border border-transparent text-slate-400 hover:text-white hover:bg-slate-800/60 hover:border-slate-700/50 hover:-translate-y-0.5 hover:scale-[1.01] transition-all duration-200">
+          <span class="material-symbols-outlined text-lg">label</span>
+          <span class="text-sm">Grupos & Interesses</span>
+        </a>
+
+        <a routerLink="/campaigns" (click)="closeMobileMenu()"
+          routerLinkActive="bg-indigo-600/20 border-indigo-500/50 text-indigo-300 font-semibold shadow-lg shadow-indigo-600/10"
+          class="flex items-center gap-3 px-4 py-3 rounded-xl border border-transparent text-slate-400 hover:text-white hover:bg-slate-800/60 hover:border-slate-700/50 hover:-translate-y-0.5 hover:scale-[1.01] transition-all duration-200">
+          <span class="material-symbols-outlined text-lg">mail</span>
+          <span class="text-sm">Campanhas</span>
+        </a>
+
+        <a routerLink="/email-builder" (click)="closeMobileMenu()"
+          routerLinkActive="bg-indigo-600/20 border-indigo-500/50 text-indigo-300 font-semibold shadow-lg shadow-indigo-600/10"
+          class="flex items-center gap-3 px-4 py-3 rounded-xl border border-transparent text-slate-400 hover:text-white hover:bg-slate-800/60 hover:border-slate-700/50 hover:-translate-y-0.5 hover:scale-[1.01] transition-all duration-200">
+          <span class="material-symbols-outlined text-lg">design_services</span>
+          <span class="text-sm">Construtor de E-mail</span>
+        </a>
+
+        <a routerLink="/contacts/import" (click)="closeMobileMenu()"
+          routerLinkActive="bg-indigo-600/20 border-indigo-500/50 text-indigo-300 font-semibold shadow-lg shadow-indigo-600/10"
+          class="flex items-center gap-3 px-4 py-3 rounded-xl border border-transparent text-slate-400 hover:text-white hover:bg-slate-800/60 hover:border-slate-700/50 hover:-translate-y-0.5 hover:scale-[1.01] transition-all duration-200">
+          <span class="material-symbols-outlined text-lg">upload_file</span>
+          <span class="text-sm">Importar Leads</span>
+        </a>
+
+        <a *ngIf="user?.role === 'ADMIN'" routerLink="/users" (click)="closeMobileMenu()"
+          routerLinkActive="bg-indigo-600/20 border-indigo-500/50 text-indigo-300 font-semibold shadow-lg shadow-indigo-600/10"
+          class="flex items-center gap-3 px-4 py-3 rounded-xl border border-transparent text-slate-400 hover:text-white hover:bg-slate-800/60 hover:border-slate-700/50 hover:-translate-y-0.5 transition-all duration-200">
+          <span class="material-symbols-outlined text-lg">admin_panel_settings</span>
+          <span class="text-sm">Usuários & Permissões</span>
+        </a>
+      </nav>
+    </div>
+
+    <!-- Perfil do Usuário e Logout -->
+    <div class="pt-4 border-t border-slate-800 flex items-center justify-between mt-auto">
+      <div class="truncate mr-2">
+        <p class="text-sm font-semibold text-white truncate">{{ user?.name || 'Operador' }}</p>
+        <p class="text-xs text-slate-400 truncate">{{ user?.email }}</p>
+      </div>
+      <button (click)="logout()" title="Sair"
+        class="p-2.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800/80 rounded-xl border border-transparent hover:border-rose-500/30 transition-all duration-200 flex-shrink-0">
+        <span class="material-symbols-outlined">logout</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Outlet Dinâmico -->
+  <main class="flex-1 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 overflow-y-auto">
+    <router-outlet></router-outlet>
+  </main>
+</div>

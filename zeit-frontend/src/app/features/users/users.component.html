@@ -1,0 +1,225 @@
+<div class="p-8">
+  <header class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <h2 class="text-3xl font-extrabold text-white tracking-tight">Gestão de Usuários</h2>
+      <p class="text-slate-400 text-sm mt-1">Gerencie os acessos e papéis dos operadores do CRM</p>
+    </div>
+
+    <button (click)="openCreateModal()"
+      class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-sm shadow-lg shadow-indigo-600/25 border border-indigo-400/30 transition-all flex items-center gap-2">
+      <span class="material-symbols-outlined text-base">person_add</span> Novo Usuário
+    </button>
+  </header>
+
+  <div class="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl overflow-hidden">
+    <div *ngIf="isLoading" class="flex justify-center py-16">
+      <div class="animate-spin h-9 w-9 border-4 border-indigo-500 border-t-transparent rounded-full"></div>
+    </div>
+
+    <table *ngIf="!isLoading" class="w-full text-left text-sm text-slate-300">
+      <thead
+        class="bg-slate-950/60 uppercase text-[11px] font-bold tracking-wider text-slate-400 border-b border-slate-800">
+        <tr>
+          <th class="px-6 py-4">Nome / E-mail</th>
+          <th class="px-6 py-4">Função / Permissão</th>
+          <th class="px-6 py-4">Status</th>
+          <th class="px-6 py-4">Data de Cadastro</th>
+          <th class="px-6 py-4 text-right">Ações</th>
+        </tr>
+      </thead>
+
+      <tbody class="divide-y divide-slate-800/50">
+        <tr *ngFor="let u of users" class="hover:bg-slate-800/40 transition-colors">
+          <td class="px-6 py-4">
+            <div class="font-semibold text-white text-base">{{ u.name }}</div>
+            <div class="text-xs text-slate-400 font-mono">{{ u.email }}</div>
+          </td>
+
+          <td class="px-6 py-4">
+            <button (click)="openRoleModal(u)" title="Clique para alterar a permissão"
+              class="px-3 py-1 text-xs font-semibold rounded-full border shadow-sm transition-all cursor-pointer hover:scale-105"
+              [ngClass]="{
+                'bg-indigo-500/10 text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/20': u.role === 'ADMIN',
+                'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700': u.role === 'MARKETING'
+              }">
+              {{ u.role }}
+            </button>
+          </td>
+
+          <td class="px-6 py-4">
+            <button *ngIf="checkMaster(u)" (click)="openStatusModal(u)" title="Clique para alterar status"
+              class="px-3 py-1 text-xs font-semibold rounded-full border shadow-sm transition-all cursor-pointer hover:scale-105"
+              [ngClass]="{
+                'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-rose-500/20 hover:text-rose-300': u.active,
+                'bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-emerald-500/20 hover:text-emerald-300': !u.active
+              }">
+              {{ u.active ? 'Ativo' : 'Inativo' }}
+            </button>
+          </td>
+
+          <td class="px-6 py-4 text-xs font-mono text-slate-400">
+            {{ u.createdAt | date:'dd/MM/yyyy HH:mm' }}
+          </td>
+
+          <td class="px-6 py-4 text-right space-x-2">
+            <button *ngIf="checkMaster(u)" (click)="openRoleModal(u)" title="Alterar Role"
+              class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition-all inline-flex">
+              <span class="material-symbols-outlined text-sm">manage_accounts</span>
+            </button>
+
+            <!-- Botão Exclusivo para admin@zeit.com -->
+            <button *ngIf="canChangePassword" (click)="openPasswordModal(u)" title="Alterar Senha do Usuário"
+              class="p-2 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-lg border border-slate-700 hover:border-amber-500/40 transition-all inline-flex">
+              <span class="material-symbols-outlined text-sm">key</span>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal 1: Novo Usuário -->
+<div *ngIf="showModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+      <h3 class="text-lg font-bold text-white">Cadastrar Novo Usuário</h3>
+      <button (click)="closeModal()" class="text-slate-400 hover:text-white">✕</button>
+    </div>
+
+    <div *ngIf="errorMessage" class="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm rounded-xl">{{
+      errorMessage }}</div>
+
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Nome Completo *</label>
+        <input type="text" [(ngModel)]="newUser.name" placeholder="Ex: João Silva"
+          class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">E-mail *</label>
+        <input type="email" [(ngModel)]="newUser.email" placeholder="joao@empresa.com"
+          class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Senha *</label>
+        <input type="password" [(ngModel)]="newUser.password" placeholder="******"
+          class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Permissão / Role</label>
+        <select [(ngModel)]="newUser.role"
+          class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500">
+          <option value="MARKETING">MARKETING</option>
+          <option value="ADMIN">ADMIN</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-3 pt-3 border-t border-slate-800">
+      <button (click)="closeModal()" class="px-4 py-2 bg-slate-800 rounded-xl text-sm text-slate-300">Cancelar</button>
+      <button (click)="saveUser()" [disabled]="isSaving"
+        class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-sm font-semibold text-white">
+        {{ isSaving ? 'Cadastrando...' : 'Cadastrar' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 2: Confirmação de Alteração de Role -->
+<div *ngIf="showRoleModal"
+  class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+    <div class="flex items-center gap-3 text-indigo-400">
+      <span class="material-symbols-outlined text-3xl">manage_accounts</span>
+      <h3 class="text-lg font-bold text-white">Alterar Permissão</h3>
+    </div>
+
+    <p class="text-sm text-slate-300">
+      Deseja alterar o nível de acesso do usuário <strong class="text-white">{{ userToUpdateRole?.name }}</strong> de
+      <span class="font-bold text-indigo-400">{{ userToUpdateRole?.role }}</span> para
+      <span class="font-bold text-indigo-300">{{ targetRole }}</span>?
+    </p>
+
+    <div class="flex justify-end gap-3 pt-3 border-t border-slate-800">
+      <button (click)="closeRoleModal()"
+        class="px-4 py-2 bg-slate-800 rounded-xl text-sm text-slate-300 hover:bg-slate-700 transition-all">
+        Cancelar
+      </button>
+      <button (click)="confirmRoleChange()" [disabled]="isUpdatingRole"
+        class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-sm font-semibold text-white shadow-lg shadow-indigo-600/20 transition-all">
+        {{ isUpdatingRole ? 'Atualizando...' : 'Confirmar Alteração' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 3: Confirmação de Alteração de Status (Ativar / Inativar) -->
+<div *ngIf="showStatusModal"
+  class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+    <div class="flex items-center gap-3" [ngClass]="userToUpdateStatus?.active ? 'text-rose-400' : 'text-emerald-400'">
+      <span class="material-symbols-outlined text-3xl">{{ userToUpdateStatus?.active ? 'person_off' : 'person_check'
+        }}</span>
+      <h3 class="text-lg font-bold text-white">{{ userToUpdateStatus?.active ? 'Inativar Usuário' : 'Ativar Usuário' }}
+      </h3>
+    </div>
+
+    <p class="text-sm text-slate-300">
+      Tem certeza de que deseja {{ userToUpdateStatus?.active ? 'desativar' : 'reativar' }} o acesso do usuário
+      <strong class="text-white">{{ userToUpdateStatus?.name }}</strong> (<span class="font-mono text-slate-400">{{
+        userToUpdateStatus?.email }}</span>)?
+    </p>
+
+    <div class="flex justify-end gap-3 pt-3 border-t border-slate-800">
+      <button (click)="closeStatusModal()"
+        class="px-4 py-2 bg-slate-800 rounded-xl text-sm text-slate-300 hover:bg-slate-700 transition-all">
+        Cancelar
+      </button>
+      <button (click)="confirmStatusChange()" [disabled]="isUpdatingStatus"
+        class="px-5 py-2 rounded-xl text-sm font-semibold text-white shadow-lg transition-all"
+        [ngClass]="userToUpdateStatus?.active ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-600/20' : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/20'">
+        {{ isUpdatingStatus ? 'Processando...' : (userToUpdateStatus?.active ? 'Sim, Inativar' : 'Sim, Ativar') }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Alterar Senha de Usuário (Apenas admin@zeit.com) -->
+<div *ngIf="showPasswordModal"
+  class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+    <div class="flex items-center gap-3 text-amber-400">
+      <span class="material-symbols-outlined text-3xl">key</span>
+      <h3 class="text-lg font-bold text-white">Redefinir Senha do Usuário</h3>
+    </div>
+
+    <p class="text-sm text-slate-300">
+      Digite a nova senha para o usuário <strong class="text-white">{{ userToUpdatePassword?.name }}</strong> (<span
+        class="font-mono text-slate-400">{{ userToUpdatePassword?.email }}</span>):
+    </p>
+
+    <div *ngIf="errorMessage" class="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm rounded-xl">{{
+      errorMessage }}</div>
+
+    <div>
+      <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Nova Senha *</label>
+      <input type="password" [(ngModel)]="newPasswordInput" placeholder="Mínimo de 6 caracteres"
+        class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-amber-500" />
+    </div>
+
+    <div class="flex justify-end gap-3 pt-3 border-t border-slate-800">
+      <button (click)="closePasswordModal()"
+        class="px-4 py-2 bg-slate-800 rounded-xl text-sm text-slate-300 hover:bg-slate-700 transition-all">
+        Cancelar
+      </button>
+      <button (click)="confirmPasswordChange()" [disabled]="isUpdatingPassword"
+        class="px-5 py-2 bg-amber-600 hover:bg-amber-500 rounded-xl text-sm font-semibold text-white shadow-lg shadow-amber-600/20 transition-all">
+        {{ isUpdatingPassword ? 'Salvando...' : 'Alterar Senha' }}
+      </button>
+    </div>
+  </div>
+</div>
