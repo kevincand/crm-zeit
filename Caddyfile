@@ -1,0 +1,13 @@
+zeitnews.com.br, www.zeitnews.com.br { 
+    # Redireciona requisições de API para o backend NestJS
+    handle_path /backend* {
+        reverse_proxy backend:3000
+    }
+    
+    handle {
+        reverse_proxy frontend:80
+    }
+}
+
+
+
